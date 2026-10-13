@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>简化控制律模拟</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f8fafc;
+  color: #1e293b;
+  margin: 0;
+  padding: 30px 16px;
+}
+.container {
+  max-width: 620px;
+  margin: auto;
+  background: white;
+  padding: 28px;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px #0001;
+}
+.control { margin: 28px 0; }
+label {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+input[type="range"] {
+  width: 100%;
+  accent-color: #2563eb;
+}
+.scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #64748b;
+}
+.result {
+  background: #f1f5f9;
+  padding: 20px;
+  border-radius: 10px;
+}
+.item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.output {
+  font-size: 30px;
+  color: #2563eb;
+  font-weight: bold;
+}
+button {
+  margin-top: 15px;
+  padding: 9px 18px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>简化控制律模拟</h2>
+  <p>Δd = Kp(dref − d) − Kf(Fn − Fref)</p>
+  <p>Kp = 0.3，Kf = 0.002 mm/N</p>
+
+  <div class="control">
+    <label for="depth">
+      当前加工深度
+      <strong id="depthValue">4.80 mm</strong>
+    </label>
+    <input id="depth" type="range"
+           min="4.4" max="5.2"
+           step="0.05" value="4.8">
+    <div class="scale">
+      <span>4.4 mm</span>
+      <span>目标 5.0 mm</span>
+      <span>5.2 mm</span>
+    </div>
+  </div>
+
+  <div class="control">
+    <label for="force">
+      当前法向力
+      <strong id="forceValue">85 N</strong>
+    </label>
+    <input id="force" type="range"
+           min="0" max="200"
+           step="5" value="85">
+    <div class="scale">
+      <span>0 N</span>
+      <span>期望 100 N</span>
+      <span>200 N</span>
+    </div>
+  </div>
+
+  <div class="result">
+    <div class="item">
+      <span>位置修正项</span>
+      <strong id="up"></strong>
+    </div>
+    <div class="item">
+      <span>力反馈修正项</span>
+      <strong id="uf"></strong>
+    </div>
+    <div class="item">
+      <span>限幅前控制量</span>
+      <strong id="raw"></strong>
+    </div>
+    <hr>
+    <p>控制输出（±0.1 mm 限幅）</p>
+    <div class="output" id="output"></div>
+    <p id="decision"></p>
+    <button id="reset">重置</button>
+  </div>
+  <small>仅用于控制原理演示，不可直接用于真实机器人。</small>
+</div>
+
+<script>
+const depth = document.getElementById("depth");
+const force = document.getElementById("force");
+
+function calculate() {
+  const d = Number(depth.value);
+  const Fn = Number(force.value);
+
+  const up = 0.3 * (5.0 - d);
+  const uf = -0.002 * (Fn - 100);
+
+  const raw = up + uf;
+  const u = Math.max(-0.1, Math.min(0.1, raw));
+
+  const fmt = v =>
+    (v >= 0 ? "+" : "") + v.toFixed(3) + " mm";
+
+  document.getElementById("depthValue")
+    .textContent = d.toFixed(2) + " mm";
+  document.getElementById("forceValue")
+    .textContent = Fn + " N";
+
+  document.getElementById("up").textContent = fmt(up);
+  document.getElementById("uf").textContent = fmt(uf);
+  document.getElementById("raw").textContent = fmt(raw);
+  document.getElementById("output").textContent = fmt(u);
+
+  document.getElementById("decision").textContent =
+    u > 0.000001 ? "增加加工深度" :
+    u < -0.000001 ? "减小加工深度" :
+    "保持当前深度";
+}
+
+depth.addEventListener("input", calculate);
+force.addEventListener("input", calculate);
+
+document.getElementById("reset").onclick = () => {
+  depth.value = 4.8;
+  force.value = 85;
+  calculate();
+};
+
+calculate();
+</script>
+</body>
+</html>
